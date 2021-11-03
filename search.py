@@ -87,45 +87,130 @@ def depthFirstSearch(problem):
     print("Start's successors:", problem.getSuccessors(problem.getStartState()))
     """
     "*** YOUR CODE HERE ***"
-    from util import Stack
 
-    stackXY = Stack()
+    fringe = util.Stack()
     
-    visited = [] 
-    path = [] 
+    explored = [] 
+    actions = [] 
 
-    if problem.isGoalState(problem.getStartState()):
+    startingState = problem.getStartState()
+
+    if problem.isGoalState(startingState):
         return []
     
-    stackXY.push((problem.getStartState(),[]))
+    startNode = (startingState, [])
+    fringe.push(startNode)
 
-    while(True):
-        if stackXY.isEmpty():
-            return []
+    while(not fringe.isEmpty()):
+        state, actions = fringe.pop()
+        explored.append(state)
 
-        xy,path = stackXY.pop()
-        visited.append(xy)
-
-        if problem.isGoalState(xy):
-            return path
+        if problem.isGoalState(state):
+            return actions
         
-        succ = problem.getSuccessors(xy)
+        successors = problem.getSuccessors(state)
 
-        if succ:
-            for item in succ:
-                if item[0] not in visited:
-                    newPath = path + [item[1]] 
-                    stackXY.push((item[0],newPath))
+        if successors:
+            for successor in successors:
+                if successor[0] not in explored:
+                    newActions = actions + [successor[1]] 
+                    newNode = (successor[0], newActions)
+                    fringe.push(newNode)
+
+    util.raiseNotDefined()
 
 
 def breadthFirstSearch(problem):
     """Search the shallowest nodes in the search tree first."""
     "*** YOUR CODE HERE ***"
+
+    fringe = util.Queue()
+
+    explored = [] 
+    actions = []
+
+    startingState = problem.getStartState()
+
+    if problem.isGoalState(startingState):
+        return []
+
+    startNode = (startingState, [])
+    fringe.push(startNode)
+
+    while(not fringe.isEmpty()):
+        state, actions = fringe.pop()
+        explored.append(state)
+
+        if problem.isGoalState(state):
+            return actions
+
+        successors = problem.getSuccessors(state)
+
+        if successors:
+            for successor in successors:
+                if successor[0] in explored:
+                    continue
+
+                statesInFringe = (state[0] for state in fringe.list)
+                
+                if successor[0] not in statesInFringe:
+                    newActions = actions + [successor[1]]
+                    newNode = (successor[0], newActions)
+                    fringe.push(newNode)
+
     util.raiseNotDefined()
 
 def uniformCostSearch(problem):
     """Search the node of least total cost first."""
     "*** YOUR CODE HERE ***"
+
+    fringe = util.PriorityQueue()
+
+    explored = []
+    actions = [] 
+
+    startingState = problem.getStartState()
+
+    if problem.isGoalState(startingState):
+        return []
+
+    startNode = (startingState, [])
+    fringe.push(startNode, 0)
+
+    while(not fringe.isEmpty()):
+        state, actions = fringe.pop()
+        explored.append(state)
+
+        if problem.isGoalState(state):
+            return actions
+
+        successors = problem.getSuccessors(state)
+
+        if successors:
+            for successor in successors:
+                if successor[0] in explored:
+                    continue
+
+                # statesInFringe ==> (state[2][0] for state in fringe.heap)
+
+                if successor[0] not in (state[2][0] for state in fringe.heap):
+                    newActions = actions + [successor[1]]
+                    priority = problem.getCostOfActions(newActions)
+                    newNode = (successor[0], newActions)
+                    fringe.push(newNode, priority)
+
+                elif successor[0] in (state[2][0] for state in fringe.heap):
+                    for state in fringe.heap:
+                        if state[2][0] == successor[0]:
+                            oldPriority = problem.getCostOfActions(state[2][1])
+
+                    newPriority = problem.getCostOfActions(actions + [successor[1]])
+
+                    if oldPriority > newPriority:
+                        newActions = actions + [successor[1]]
+                        newNode = (successor[0], newActions)
+                        fringe.update(newNode, newPriority)
+
     util.raiseNotDefined()
 
 def nullHeuristic(state, problem=None):
@@ -135,10 +220,55 @@ def nullHeuristic(state, problem=None):
     """
     return 0
 
+from util import PriorityQueue
+class PriorityQueueWithHeuristic(PriorityQueue):
+    def  __init__(self, problem, priorityFunction):
+        self.priorityFunction = priorityFunction
+        PriorityQueue.__init__(self)
+        self.problem = problem
+    def push(self, item, heuristic):
+        priority = self.priorityFunction(self.problem, item, heuristic);
+        PriorityQueue.push(self, item, priority)
+
+def f(problem, state, heuristic):
+    return problem.getCostOfActions(state[1]) + heuristic(state[0], problem)
+
 def aStarSearch(problem, heuristic=nullHeuristic):
     """Search the node that has the lowest combined cost and heuristic first."""
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    
+    fringe = PriorityQueueWithHeuristic(problem, f)
+
+    actions = [] 
+    explored = []
+
+    startingState = problem.getStartState()
+
+    if problem.isGoalState(startingState):
+        return []
+
+    startNode = (startingState, [])
+    fringe.push(startNode, heuristic)
+
+    while(not fringe.isEmpty()):
+        state, actions = fringe.pop()
+
+        if state in explored:
+            continue
+
+        explored.append(state)
+
+        if problem.isGoalState(state):
+            return actions
+
+        successors = problem.getSuccessors(state)
+
+        if successors:
+            for successor in successors:
+                if successor[0] not in explored:
+                    newActions = actions + [successor[1]]
+                    element = (successor[0], newActions)
+                    fringe.push(element, heuristic)
 
 
 # Abbreviations
